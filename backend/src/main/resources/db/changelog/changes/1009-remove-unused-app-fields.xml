@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+    <changeSet id="1009-remove-unused-app-fields" author="lapsus63">
+        <dropColumn tableName="apps" columnName="image"/>
+        <dropColumn tableName="apps" columnName="ports"/>
+        <dropColumn tableName="apps" columnName="notes"/>
+        <rollback>
+            <addColumn tableName="apps">
+                <column name="image" type="text" defaultValue=""><constraints nullable="false"/></column>
+                <column name="ports" type="text" defaultValue=""><constraints nullable="false"/></column>
+                <column name="notes" type="text" defaultValue=""><constraints nullable="false"/></column>
+            </addColumn>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

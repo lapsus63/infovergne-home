@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="1001-enable-extensions" author="lapsus63">
+        <sql>
+            <!--  L'extension pg_trgm (PostgreSQL Trigram) est utilisée pour la recherche de similarité de texte et les recherches floues (fuzzy search). -->
+            CREATE EXTENSION IF NOT EXISTS pg_trgm;
+        </sql>
+    </changeSet>
+
+    <changeSet id="1002-create-spaces-table" author="lapsus63">
+        <createTable tableName="spaces">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="slug" type="text"><constraints nullable="false" unique="true"/></column>
+            <column name="name" type="text"><constraints nullable="false"/></column>
+            <column name="type" type="text"><constraints nullable="false"/></column>
+            <column name="description" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="accent" type="text" defaultValue="#22D3A6"><constraints nullable="false"/></column>
+            <column name="visibility" type="text" defaultValue="public"><constraints nullable="false"/></column>
+            <column name="allowed_roles" type="text[]" defaultValue="{}"><constraints nullable="false"/></column>
+            <column name="write_roles" type="text[]" defaultValue="{}"><constraints nullable="false"/></column>
+            <column name="position" type="integer" defaultValueNumeric="1"><constraints nullable="false"/></column>
+        </createTable>
+        <sql>
+            ALTER TABLE spaces ADD CONSTRAINT spaces_type_check CHECK (type IN ('wiki', 'blog'));
+            ALTER TABLE spaces ADD CONSTRAINT spaces_visibility_check CHECK (visibility IN ('public', 'restricted'));
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE spaces DROP CONSTRAINT IF EXISTS spaces_type_check;
+                ALTER TABLE spaces DROP CONSTRAINT IF EXISTS spaces_visibility_check;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="1003-create-docs-table" author="lapsus63">
+        <createTable tableName="docs">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="space_slug" type="text"><constraints nullable="false" foreignKeyName="fk_docs_space_slug" references="spaces(slug)" deleteCascade="true"/></column>
+            <column name="slug" type="text"><constraints nullable="false"/></column>
+            <column name="title" type="text"><constraints nullable="false"/></column>
+            <column name="excerpt" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="body" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="tags" type="text[]" defaultValue="{}"><constraints nullable="false"/></column>
+            <column name="status" type="text" defaultValue="draft"><constraints nullable="false"/></column>
+            <column name="visibility" type="text" defaultValue="public"><constraints nullable="false"/></column>
+            <column name="allowed_roles" type="text[]" defaultValue="{}"><constraints nullable="false"/></column>
+            <column name="author" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="published_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <addUniqueConstraint tableName="docs" columnNames="space_slug, slug" constraintName="docs_space_slug_slug_unique"/>
+        <sql>
+            ALTER TABLE docs ADD CONSTRAINT docs_status_check CHECK (status IN ('draft', 'published', 'archived'));
+            ALTER TABLE docs ADD CONSTRAINT docs_visibility_check CHECK (visibility IN ('public', 'restricted'));
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE docs DROP CONSTRAINT IF EXISTS docs_status_check;
+                ALTER TABLE docs DROP CONSTRAINT IF EXISTS docs_visibility_check;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="1004-create-docs-indexes" author="lapsus63">
+        <sql>CREATE INDEX IF NOT EXISTS docs_title_trgm ON docs USING gin (title gin_trgm_ops);</sql>
+        <sql>CREATE INDEX IF NOT EXISTS docs_body_trgm ON docs USING gin (body gin_trgm_ops);</sql>
+        <sql>CREATE INDEX IF NOT EXISTS docs_fts ON docs USING gin (to_tsvector('french', coalesce(title, '') || ' ' || coalesce(excerpt, '') || ' ' || coalesce(body, '')));</sql>
+        <createIndex tableName="docs" indexName="idx_docs_space_status"><column name="space_slug"/><column name="status"/><column name="published_at" descending="true"/></createIndex>
+        <sql>CREATE INDEX IF NOT EXISTS idx_docs_tags ON docs USING gin(tags);</sql>
+    </changeSet>
+
+    <changeSet id="1005-create-apps-table" author="lapsus63">
+        <createTable tableName="apps">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="slug" type="text"><constraints nullable="false" unique="true"/></column>
+            <column name="name" type="text"><constraints nullable="false"/></column>
+            <column name="description" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="category" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="url" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="image" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="ports" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="notes" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="tags" type="text[]" defaultValue="{}"><constraints nullable="false"/></column>
+            <column name="container_name" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="visibility" type="text" defaultValue="public"><constraints nullable="false"/></column>
+            <column name="allowed_roles" type="text[]" defaultValue="{}"><constraints nullable="false"/></column>
+            <column name="state" type="text" defaultValue="unknown"><constraints nullable="false"/></column>
+            <column name="state_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <sql>
+            ALTER TABLE apps ADD CONSTRAINT apps_visibility_check CHECK (visibility IN ('public', 'restricted'));
+            ALTER TABLE apps ADD CONSTRAINT apps_state_check CHECK (state IN ('running', 'stopped', 'error', 'unknown'));
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE apps DROP CONSTRAINT IF EXISTS apps_visibility_check;
+                ALTER TABLE apps DROP CONSTRAINT IF EXISTS apps_state_check;
+            </sql>
+        </rollback>
+        <sql>CREATE INDEX IF NOT EXISTS idx_apps_tags ON apps USING gin(tags);</sql>
+    </changeSet>
+
+    <changeSet id="1006-create-media-table" author="lapsus63">
+        <createTable tableName="media">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="url" type="text"><constraints nullable="false"/></column>
+            <column name="name" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="width" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="height" type="integer" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="1007-create-favorites-table" author="lapsus63">
+        <createTable tableName="favorites"><column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="user_id" type="text"/><column name="label" type="text"><constraints nullable="false"/></column>
+            <column name="href" type="text"><constraints nullable="false"/></column>
+            <column name="kind" type="text" defaultValue="link"><constraints nullable="false"/></column>
+            <column name="position" type="integer" defaultValueNumeric="1"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="favorites" indexName="favorites_user"><column name="user_id"/></createIndex>
+    </changeSet>
+
+    <changeSet id="1008-create-slug-redirects-table" author="lapsus63">
+        <createTable tableName="slug_redirects">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="kind" type="text"><constraints nullable="false"/></column>
+            <column name="space_slug" type="text"><constraints nullable="false"/></column>
+            <column name="old_slug" type="text"><constraints nullable="false"/></column>
+            <column name="new_slug" type="text"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="1009-create-backups-table" author="lapsus63">
+        <createTable tableName="backups">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="size_bytes" type="bigint" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="status" type="text" defaultValue="ok"><constraints nullable="false"/></column>
+            <column name="message" type="text" defaultValue=""><constraints nullable="false"/></column>
+        </createTable>
+        <sql>
+            ALTER TABLE backups ADD CONSTRAINT backups_status_check CHECK (status IN ('ok', 'failed'));
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE backups DROP CONSTRAINT IF EXISTS backups_status_check;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="1010-create-site-settings-table" author="lapsus63">
+        <createTable tableName="site_settings">
+            <column name="key" type="text"><constraints primaryKey="true"/></column>
+            <column name="value" type="text"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="1011-create-audit-logs-table" author="lapsus63">
+        <createTable tableName="audit_logs">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()"><constraints primaryKey="true"/></column>
+            <column name="user_id" type="text"><constraints nullable="false"/></column>
+            <column name="user_name" type="text" defaultValue=""><constraints nullable="false"/></column>
+            <column name="action" type="text"><constraints nullable="false"/></column>
+            <column name="entity_type" type="text"><constraints nullable="false"/></column>
+            <column name="entity_id" type="text"><constraints nullable="false"/></column>
+            <column name="changes" type="jsonb"/>
+            <column name="ip_address" type="text"/>
+            <column name="user_agent" type="text"/>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="audit_logs" indexName="idx_audit_user"><column name="user_id"/></createIndex>
+        <createIndex tableName="audit_logs" indexName="idx_audit_entity"><column name="entity_type"/><column name="entity_id"/></createIndex>
+        <createIndex tableName="audit_logs" indexName="idx_audit_created"><column name="created_at" descending="true"/></createIndex>
+    </changeSet>
+
+    <changeSet id="1012-create-user-sessions-table" author="lapsus63">
+        <createTable tableName="user_sessions">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()"><constraints primaryKey="true"/></column>
+            <column name="user_id" type="text"><constraints nullable="false"/></column>
+            <column name="refresh_token" type="text"/>
+            <column name="expires_at" type="timestamptz"><constraints nullable="false"/></column>
+            <column name="last_activity" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="ip_address" type="text"/>
+            <column name="user_agent" type="text"/>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="user_sessions" indexName="idx_sessions_user"><column name="user_id"/></createIndex>
+        <createIndex tableName="user_sessions" indexName="idx_sessions_expires"><column name="expires_at"/></createIndex>
+    </changeSet>
+
+    <changeSet id="1013-create-comments-table" author="lapsus63">
+        <createTable tableName="comments">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()"><constraints primaryKey="true"/></column>
+            <column name="doc_id" type="text"><constraints nullable="false" foreignKeyName="fk_comments_doc_id" references="docs(id)" deleteCascade="true"/></column>
+            <column name="parent_id" type="uuid"><constraints foreignKeyName="fk_comments_parent_id" references="comments(id)" deleteCascade="true"/></column>
+            <column name="author_id" type="text"><constraints nullable="false"/></column>
+            <column name="author_name" type="text"><constraints nullable="false"/></column>
+            <column name="content" type="text"><constraints nullable="false"/></column>
+            <column name="status" type="text" defaultValue="published"><constraints nullable="false"/></column>
+            <column name="created_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+            <column name="updated_at" type="timestamptz" defaultValueComputed="now()"><constraints nullable="false"/></column>
+        </createTable>
+        <createIndex tableName="comments" indexName="idx_comments_doc"><column name="doc_id"/><column name="created_at"/></createIndex>
+        <createIndex tableName="comments" indexName="idx_comments_author"><column name="author_id"/></createIndex>
+        <createIndex tableName="comments" indexName="idx_comments_parent"><column name="parent_id"/></createIndex>
+        <sql>
+            ALTER TABLE comments ADD CONSTRAINT comments_status_check CHECK (status IN ('published', 'hidden', 'deleted'));
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_status_check;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="1014-create-spaces-visibility-index" author="lapsus63">
+        <createIndex tableName="spaces" indexName="idx_spaces_visibility"><column name="visibility"/><column name="position"/></createIndex>
+    </changeSet>
+
+</databaseChangeLog>

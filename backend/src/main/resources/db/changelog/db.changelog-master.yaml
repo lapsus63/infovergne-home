@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/1000-initial-schema.xml
+  - include:
+      file: db/changelog/changes/2000-initial-data.xml
+  - include:
+      file: db/changelog/changes/1009-remove-unused-app-fields.xml
+  - include:
+      file: db/changelog/changes/1010-remove-app-slug.xml

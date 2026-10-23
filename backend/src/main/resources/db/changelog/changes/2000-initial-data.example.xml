@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="2001-insert-initial-site-settings" author="lapsus63">
+        <insert tableName="site_settings">
+            <column name="key" value="site_title"/>
+            <column name="value" value="Home Lab"/>
+        </insert>
+        <insert tableName="site_settings">
+            <column name="key" value="site_tagline"/>
+            <column name="value" value="Applications, notes et journal d'un laboratoire auto-hébergé"/>
+        </insert>
+        <insert tableName="site_settings">
+            <column name="key" value="memo_space"/>
+            <column name="value" value="maison"/>
+        </insert>
+        <insert tableName="site_settings">
+            <column name="key" value="backup_cron"/>
+            <column name="value" value="0 2 * * *"/>
+        </insert>
+        <insert tableName="site_settings">
+            <column name="key" value="backup_keep"/>
+            <column name="value" value="14"/>
+        </insert>
+        <rollback>
+            <delete tableName="site_settings">
+                <where>key IN ('site_title', 'site_tagline', 'memo_space', 'backup_cron', 'backup_keep')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

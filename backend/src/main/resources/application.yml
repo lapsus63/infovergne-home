@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: infovergne-home-backend
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/infovergne}
+    username: ${DATABASE_USER:infovergne}
+    password: ${DATABASE_PASSWORD:infovergne}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Keycloak JWKS endpoint
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8083/realms/infovergne/protocol/openid-connect/certs}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8083/realms/infovergne}
+
+# Configuration Keycloak
+keycloak:
+  realm: ${KEYCLOAK_REALM:infovergne}
+  auth-server-url: ${KEYCLOAK_AUTH_URL:http://localhost:8083}
+  resource: ${KEYCLOAK_CLIENT_ID:infovergne-home}
+
+# Configuration applicative
+infovergne:
+  home:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    admin-roles:
+      - ADMIN
+      - INFOVERGNE_ADMIN
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.infovergne.home: DEBUG
+    org.springframework.security: DEBUG
