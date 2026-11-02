@@ -3,6 +3,14 @@ export type DocStatus = 'draft' | 'published' | 'archived';
 export type SpaceType = 'wiki' | 'blog';
 export type RunState = 'running' | 'stopped' | 'error' | 'unknown';
 
+export interface Category {
+  id: string;
+  name: string;
+  position: number;
+  apps_count?: number;
+  favorites_count?: number;
+}
+
 export interface Space {
   id: string;
   slug: string;
@@ -62,6 +70,11 @@ export interface Favorite {
   href: string;
   kind: 'app' | 'wiki' | 'blog' | 'link';
   position: number;
+  category: string;
+  description: string;
+  tags: string[];
+  visibility: Visibility;
+  allowed_roles: string[];
 }
 
 export interface BackupEntry {
@@ -73,7 +86,7 @@ export interface BackupEntry {
 }
 
 export interface SiteSettings {
-  memo_space: string;
+  memo_doc_id: string;
   site_title: string;
   site_tagline: string;
   backup_cron: string;

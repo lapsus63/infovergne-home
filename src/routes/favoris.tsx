@@ -50,6 +50,10 @@ function FavoritesPage() {
     onError: () => toast.error('Enregistrement impossible'),
   });
 
+  const allCategories = [...new Set(items.map((i) => i.category).filter(Boolean))];
+
+  const update = (index: number, patch: Partial<Item>) => setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+
   if (!signedIn) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
@@ -64,28 +68,51 @@ function FavoritesPage() {
       <h1 className="text-3xl">Mes favoris</h1>
       <p className="mt-2 text-muted-foreground">Ces raccourcis s'affichent sur votre page d'accueil. Pour une application, utilisez directement son lien d'accès.</p>
 
-      <ul className="mt-6 space-y-3">
+      <ul className="mt-6 space-y-4">
         {items.map((item, index) => (
-          <li key={item.id} className="surface flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+          <li key={item.id} className="surface space-y-3 p-3">
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={item.label}
+                onChange={(e) => update(index, { label: e.target.value })}
+                placeholder="Intitulé"
+                className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm sm:w-48"
+              />
+              <input
+                value={item.href}
+                onChange={(e) => update(index, { href: e.target.value })}
+                placeholder="https://… ou /chemin-interne"
+                className="w-full flex-1 rounded-md border border-border bg-card px-2 py-1.5 font-mono text-sm"
+              />
+              {/* catégorie combobox */}
+              <div className="relative min-w-[9rem]">
+                <input
+                  list={`fav-cats-${item.id}`}
+                  value={item.category}
+                  onChange={(e) => update(index, { category: e.target.value })}
+                  placeholder="Catégorie"
+                  className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm"
+                />
+                <datalist id={`fav-cats-${item.id}`}>
+                  {allCategories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+              <button
+                onClick={() => setItems(items.filter((_, i) => i !== index))}
+                className="self-start rounded-md border border-border p-2 text-muted-foreground hover:text-destructive"
+                aria-label="Supprimer"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
             <input
-              value={item.label}
-              onChange={(e) => setItems(items.map((it, i) => (i === index ? { ...it, label: e.target.value } : it)))}
-              placeholder="Intitulé"
-              className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm sm:w-48"
+              value={item.description}
+              onChange={(e) => update(index, { description: e.target.value })}
+              placeholder="Description (optionnelle)"
+              className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm"
             />
-            <input
-              value={item.href}
-              onChange={(e) => setItems(items.map((it, i) => (i === index ? { ...it, href: e.target.value } : it)))}
-              placeholder="https://… ou /chemin-interne"
-              className="w-full flex-1 rounded-md border border-border bg-card px-2 py-1.5 font-mono text-sm"
-            />
-            <button
-              onClick={() => setItems(items.filter((_, i) => i !== index))}
-              className="self-end rounded-md border border-border p-2 text-muted-foreground hover:text-destructive"
-              aria-label="Supprimer"
-            >
-              <Trash2 className="size-4" />
-            </button>
           </li>
         ))}
       </ul>
@@ -101,6 +128,11 @@ function FavoritesPage() {
                 href: '',
                 kind: 'link',
                 position: items.length + 1,
+                category: '',
+                description: '',
+                tags: [],
+                visibility: 'public',
+                allowed_roles: [],
               },
             ])
           }

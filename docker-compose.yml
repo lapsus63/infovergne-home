@@ -56,7 +56,7 @@ services:
     environment:
       SITE_URL: https://app.infovergne.com
       AGENT_KEY: ${AGENT_KEY:?AGENT_KEY must be set}
-      INTERVAL: "60"
+      INTERVAL: '60'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:

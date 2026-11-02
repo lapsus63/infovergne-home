@@ -64,7 +64,8 @@ export const getHome = createServerFn({ method: 'GET' }).handler(async () => {
   const readableApps = apps.filter((a) => canRead(a, user));
   const published = visibleDocs(docs, spaces, user).filter((d) => d.status === 'published');
   const mine = user ? favorites.filter((f) => f.user_id === user.id) : [];
-  const chosen = mine.length ? mine : favorites.filter((f) => f.user_id === null);
+  const publicFavs = favorites.filter((f) => f.user_id === null && canRead(f, user));
+  const chosen = mine.length ? mine : publicFavs;
 
   return {
     user,
@@ -167,14 +168,30 @@ export const getDoc = createServerFn({ method: 'GET' })
 
 export const getMemo = createServerFn({ method: 'GET' }).handler(async () => {
   const db = await import('./db.server');
+  const { renderDocument } = await import('./render.server');
+  const { canRead } = await import('./types');
+  const { user } = await context();
+  
   const [settings, spaces, docs] = await Promise.all([db.getSettings(), db.listSpaces(), db.listDocs()]);
-  const space = spaces.find((s) => s.slug === settings.memo_space);
-  if (!space || space.visibility !== 'public') return { space: null, docs: [] as PublicDoc[] };
-  const list = docs
-    .filter((d) => d.space_slug === space.slug && d.status === 'published' && d.visibility === 'public')
-    .sort((a, b) => b.published_at.localeCompare(a.published_at))
-    .map((d) => toPublic(d, spaces));
-  return { space, docs: list };
+  
+  if (!settings.memo_doc_id) return { doc: null, html: '' };
+  
+  const doc = docs.find((d) => d.id === settings.memo_doc_id);
+  if (!doc) return { doc: null, html: '' };
+  
+  // Vérifier que le document est publié et accessible
+  if (doc.status !== 'published') return { doc: null, html: '' };
+  if (!canRead(doc, user)) return { doc: null, html: '' };
+  
+  const space = spaces.find((s) => s.slug === doc.space_slug);
+  if (!space) return { doc: null, html: '' };
+  
+  const rendered = renderDocument(doc.body);
+  
+  return { 
+    doc: toPublic(doc, spaces),
+    html: rendered.html
+  };
 });
 
 /* ------------------------------ recherche ------------------------------ */

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="1012-create-categories-table" author="lapsus63">
+        <createTable tableName="categories">
+            <column name="id" type="text"><constraints primaryKey="true"/></column>
+            <column name="name" type="text"><constraints nullable="false" unique="true"/></column>
+            <column name="position" type="integer" defaultValueNumeric="1"><constraints nullable="false"/></column>
+        </createTable>
+        <sql>
+            INSERT INTO categories (id, name, position) VALUES
+                ('cat-domotique', 'Domotique', 1),
+                ('cat-media', 'Média', 2),
+                ('cat-observabilite', 'Observabilité', 3),
+                ('cat-securite', 'Sécurité', 4),
+                ('cat-dev', 'Développement', 5),
+                ('cat-outils', 'Outils', 6),
+                ('cat-doc', 'Documentation', 7)
+            ON CONFLICT DO NOTHING;
+        </sql>
+        <rollback>
+            <dropTable tableName="categories"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

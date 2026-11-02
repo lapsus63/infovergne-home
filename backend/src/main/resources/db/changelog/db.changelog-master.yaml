@@ -7,3 +7,7 @@ databaseChangeLog:
       file: db/changelog/changes/1009-remove-unused-app-fields.xml
   - include:
       file: db/changelog/changes/1010-remove-app-slug.xml
+  - include:
+      file: db/changelog/changes/1011-favorites-extra-fields.xml
+  - include:
+      file: db/changelog/changes/1012-create-categories-table.xml

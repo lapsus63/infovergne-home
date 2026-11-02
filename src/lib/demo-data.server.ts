@@ -1,6 +1,16 @@
-import type { AppEntry, BackupEntry, Doc, Favorite, MediaItem, SiteSettings, Space } from './types';
+import type { AppEntry, BackupEntry, Category, Doc, Favorite, MediaItem, SiteSettings, Space } from './types';
 
 const now = '2026-09-10T10:00:00.000Z';
+
+export const demoCategories: Category[] = [
+  { id: 'cat-domotique', name: 'Domotique', position: 1 },
+  { id: 'cat-media', name: 'Média', position: 2 },
+  { id: 'cat-observabilite', name: 'Observabilité', position: 3 },
+  { id: 'cat-securite', name: 'Sécurité', position: 4 },
+  { id: 'cat-dev', name: 'Développement', position: 5 },
+  { id: 'cat-outils', name: 'Outils', position: 6 },
+  { id: 'cat-doc', name: 'Documentation', position: 7 },
+];
 
 export const demoSpaces: Space[] = [
   {
@@ -268,6 +278,11 @@ export const demoFavorites: Favorite[] = [
     href: 'https://ha.lab.local',
     kind: 'app',
     position: 1,
+    category: 'Domotique',
+    description: '',
+    tags: [],
+    visibility: 'public',
+    allowed_roles: [],
   },
   {
     id: 'fav-2',
@@ -276,6 +291,11 @@ export const demoFavorites: Favorite[] = [
     href: 'https://media.lab.local',
     kind: 'app',
     position: 2,
+    category: 'Média',
+    description: '',
+    tags: [],
+    visibility: 'public',
+    allowed_roles: [],
   },
   {
     id: 'fav-3',
@@ -284,6 +304,11 @@ export const demoFavorites: Favorite[] = [
     href: '/wiki/maison/reseau-domotique',
     kind: 'wiki',
     position: 3,
+    category: 'Documentation',
+    description: '',
+    tags: [],
+    visibility: 'public',
+    allowed_roles: [],
   },
   {
     id: 'fav-4',
@@ -292,6 +317,11 @@ export const demoFavorites: Favorite[] = [
     href: '/blog/pro/migration-vers-kubernetes',
     kind: 'blog',
     position: 4,
+    category: 'Documentation',
+    description: '',
+    tags: [],
+    visibility: 'public',
+    allowed_roles: [],
   },
 ];
 
@@ -315,7 +345,7 @@ export const demoBackups: BackupEntry[] = [
 ];
 
 export const demoSettings: SiteSettings = {
-  memo_space: 'maison',
+  memo_doc_id: '',
   site_title: 'Home Lab',
   site_tagline: "Applications, notes et journal d'un laboratoire auto-hébergé",
   backup_cron: '0 2 * * *',

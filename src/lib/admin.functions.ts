@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 
-import { canWriteSpace, isAdmin, type AppEntry, type Doc, type Favorite, type MediaItem, type SiteSettings, type Space } from './types';
+import { canWriteSpace, isAdmin, type AppEntry, type Category, type Doc, type Favorite, type MediaItem, type SiteSettings, type Space } from './types';
 
 async function currentUser() {
   const { readUser } = await import('./auth.server');
@@ -18,7 +18,7 @@ export const getAdminData = createServerFn({ method: 'GET' }).handler(async () =
   const db = await import('./db.server');
   const user = await currentUser();
   if (!user) throw new Error('Connexion requise');
-  const [spaces, docs, apps, media, favorites, backups, settings] = await Promise.all([
+  const [spaces, docs, apps, media, favorites, backups, settings, categories] = await Promise.all([
     db.listSpaces(),
     db.listDocs(),
     db.listApps(),
@@ -26,6 +26,7 @@ export const getAdminData = createServerFn({ method: 'GET' }).handler(async () =
     db.listFavorites(),
     db.listBackups(),
     db.getSettings(),
+    db.listCategories(),
   ]);
   const admin = isAdmin(user);
   const writable = spaces.filter((s) => canWriteSpace(s, user));
@@ -38,6 +39,15 @@ export const getAdminData = createServerFn({ method: 'GET' }).handler(async () =
     apps: admin ? apps : [],
     media,
     favorites: admin ? favorites.filter((f) => f.user_id === null) : [],
+    categories: admin
+      ? categories
+          .map((c) => ({
+            ...c,
+            apps_count: apps.filter((a) => a.category === c.name).length,
+            favorites_count: favorites.filter((f) => f.category === c.name).length,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }))
+      : [],
     backups: admin ? backups : [],
     settings,
     memoryMode: db.memoryMode(),
@@ -58,8 +68,47 @@ export const removeSpace = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireAdminUser();
     const db = await import('./db.server');
+    
+    // Récupérer l'espace pour connaître son slug
+    const spaces = await db.listSpaces();
+    const space = spaces.find((s) => s.id === data.id);
+    if (!space) throw new Error("Espace introuvable");
+    
+    // Compter et supprimer les documents liés
+    const docs = await db.listDocs();
+    const linkedDocs = docs.filter((d) => d.space_slug === space.slug);
+    
+    for (const doc of linkedDocs) {
+      await db.deleteRow('docs', doc.id);
+    }
+    
+    // Supprimer l'espace
     await db.deleteRow('spaces', data.id);
-    return { ok: true };
+    
+    return { ok: true, deletedDocs: linkedDocs.length };
+  });
+
+export const getSpaceDeletionImpact = createServerFn({ method: 'POST' })
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAdminUser();
+    const db = await import('./db.server');
+    
+    // Récupérer l'espace
+    const spaces = await db.listSpaces();
+    const space = spaces.find((s) => s.id === data.id);
+    if (!space) throw new Error("Espace introuvable");
+    
+    // Compter les documents liés
+    const docs = await db.listDocs();
+    const linkedDocs = docs.filter((d) => d.space_slug === space.slug);
+    
+    return { 
+      spaceName: space.name,
+      spaceType: space.type,
+      docsCount: linkedDocs.length,
+      publishedDocsCount: linkedDocs.filter(d => d.status === 'published').length
+    };
   });
 
 export const saveDoc = createServerFn({ method: 'POST' })
@@ -117,7 +166,31 @@ export const saveApp = createServerFn({ method: 'POST' })
       state: existing?.state ?? 'unknown',
       state_at: existing?.state_at ?? new Date().toISOString(),
     };
-    await db.upsertRow('apps', app);
+    await db.upsertRow('apps', app as unknown as Record<string, unknown> & { id: string });
+    return { ok: true };
+  });
+
+export const saveCategory = createServerFn({ method: 'POST' })
+  .inputValidator((data: { category: Category; oldName?: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAdminUser();
+    const db = await import('./db.server');
+    await db.renameCategoryCascade(data.category.id, data.oldName ?? data.category.name, data.category.name, data.category.position);
+    return { ok: true };
+  });
+
+export const removeCategory = createServerFn({ method: 'POST' })
+  .inputValidator((data: { id: string; name: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAdminUser();
+    const db = await import('./db.server');
+    const [apps, favorites] = await Promise.all([db.listApps(), db.listFavorites()]);
+    const appsCount = apps.filter((a) => a.category === data.name).length;
+    const favsCount = favorites.filter((f) => f.category === data.name).length;
+    if (appsCount > 0 || favsCount > 0) {
+      throw new Error(`Impossible de supprimer la catégorie « ${data.name} » : elle est utilisée par ${appsCount} application(s) et ${favsCount} favori(s).`);
+    }
+    await db.deleteCategoryCascade(data.id, data.name);
     return { ok: true };
   });
 

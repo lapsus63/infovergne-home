@@ -11,8 +11,6 @@ const NAV = [
   { to: '/', label: 'Accueil' },
   { to: '/applications', label: 'Applications' },
   { to: '/espaces', label: 'Espaces' },
-  { to: '/memo', label: 'Mémo' },
-  { to: '/recherche', label: 'Recherche' },
 ] as const;
 
 export function SiteHeader() {
@@ -52,8 +50,8 @@ export function SiteHeader() {
           {signedIn ? (
             <div className="flex items-center gap-2">
               <span className="max-w-[12rem] truncate font-mono text-xs text-muted-foreground">{user?.name}</span>
-              <button onClick={() => logout()} className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary">
-                <LogOut className="size-4" /> Se déconnecter
+              <button onClick={() => logout()} className="rounded-md border border-border p-2 text-muted-foreground hover:text-foreground" title="Se déconnecter" aria-label="Se déconnecter">
+                <LogOut className="size-4" />
               </button>
             </div>
           ) : (

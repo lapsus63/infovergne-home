@@ -1,9 +1,9 @@
 import postgres from 'postgres';
 
-import { demoApps, demoBackups, demoDocs, demoFavorites, demoMedia, demoSettings, demoSpaces } from './demo-data.server';
-import type { AppEntry, BackupEntry, Doc, Favorite, MediaItem, SiteSettings, Space } from './types';
+import { demoApps, demoBackups, demoCategories, demoDocs, demoFavorites, demoMedia, demoSettings, demoSpaces } from './demo-data.server';
+import type { AppEntry, BackupEntry, Category, Doc, Favorite, MediaItem, SiteSettings, Space } from './types';
 
-export type TableName = 'spaces' | 'docs' | 'apps' | 'media' | 'favorites' | 'backups' | 'slug_redirects';
+export type TableName = 'spaces' | 'docs' | 'apps' | 'media' | 'favorites' | 'backups' | 'slug_redirects' | 'categories';
 
 export interface SlugRedirect {
   id: string;
@@ -45,6 +45,7 @@ const memory = {
   favorites: [...demoFavorites],
   backups: [...demoBackups],
   slug_redirects: [] as SlugRedirect[],
+  categories: [...demoCategories],
   settings: { ...demoSettings },
 };
 
@@ -110,6 +111,15 @@ export async function listRedirects(): Promise<SlugRedirect[]> {
   return safe(async () => await sql<SlugRedirect[]>`select * from slug_redirects`, memory.slug_redirects);
 }
 
+export async function listCategories(): Promise<Category[]> {
+  const sql = getSql();
+  if (!sql) return [...memory.categories].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+  return safe(
+    async () => await sql<Category[]>`select * from categories order by lower(name) asc`,
+    [...memory.categories].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }))
+  );
+}
+
 export async function getSettings(): Promise<SiteSettings> {
   const sql = getSql();
   if (!sql) return memory.settings;
@@ -117,7 +127,7 @@ export async function getSettings(): Promise<SiteSettings> {
     const rows = await sql<{ key: string; value: string }[]>`select key, value from site_settings`;
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return {
-      memo_space: map['memo_space'] ?? demoSettings.memo_space,
+      memo_doc_id: map['memo_doc_id'] ?? map['memo_space'] ?? demoSettings.memo_doc_id,
       site_title: map['site_title'] ?? demoSettings.site_title,
       site_tagline: map['site_tagline'] ?? demoSettings.site_tagline,
       backup_cron: map['backup_cron'] ?? demoSettings.backup_cron,
@@ -194,6 +204,63 @@ export async function deleteFavoritesFor(userId: string | null): Promise<void> {
   await safe(async () => {
     if (userId === null) await sql`delete from favorites where user_id is null`;
     else await sql`delete from favorites where user_id = ${userId}`;
+    return null;
+  }, null);
+}
+
+export async function deleteCategoryCascade(id: string, name: string): Promise<void> {
+  const sql = getSql();
+  if (!sql) {
+    const list = memory.categories;
+    const index = list.findIndex((c) => c.id === id);
+    if (index >= 0) list.splice(index, 1);
+    for (const a of memory.apps) {
+      if (a.category === name) a.category = '';
+    }
+    for (const f of memory.favorites) {
+      if (f.category === name) f.category = '';
+    }
+    return;
+  }
+  await safe(async () => {
+    await sql`delete from categories where id = ${id}`;
+    if (name) {
+      await sql`update apps set category = '' where category = ${name}`;
+      await sql`update favorites set category = '' where category = ${name}`;
+    }
+    return null;
+  }, null);
+}
+
+export async function renameCategoryCascade(id: string, oldName: string, newName: string, position: number): Promise<void> {
+  const sql = getSql();
+  if (!sql) {
+    const cat = memory.categories.find((c) => c.id === id);
+    if (cat) {
+      cat.name = newName;
+      cat.position = position;
+    } else {
+      memory.categories.push({ id, name: newName, position });
+    }
+    if (oldName && oldName !== newName) {
+      for (const a of memory.apps) {
+        if (a.category === oldName) a.category = newName;
+      }
+      for (const f of memory.favorites) {
+        if (f.category === oldName) f.category = newName;
+      }
+    }
+    return;
+  }
+  await safe(async () => {
+    await sql`
+      insert into categories (id, name, position) values (${id}, ${newName}, ${position})
+      on conflict (id) do update set name = excluded.name, position = excluded.position
+    `;
+    if (oldName && oldName !== newName) {
+      await sql`update apps set category = ${newName} where category = ${oldName}`;
+      await sql`update favorites set category = ${newName} where category = ${oldName}`;
+    }
     return null;
   }, null);
 }

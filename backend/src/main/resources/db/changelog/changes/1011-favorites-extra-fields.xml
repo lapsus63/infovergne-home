@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="1011-favorites-extra-fields" author="lapsus63">
+        <addColumn tableName="favorites">
+            <column name="category"      type="text"    defaultValue=""   ><constraints nullable="false"/></column>
+            <column name="description"   type="text"    defaultValue=""   ><constraints nullable="false"/></column>
+            <column name="tags"          type="text[]"  defaultValue="{}" ><constraints nullable="false"/></column>
+            <column name="visibility"    type="text"    defaultValue="public"><constraints nullable="false"/></column>
+            <column name="allowed_roles" type="text[]"  defaultValue="{}" ><constraints nullable="false"/></column>
+        </addColumn>
+        <sql>
+            ALTER TABLE favorites ADD CONSTRAINT favorites_visibility_check CHECK (visibility IN ('public', 'restricted'));
+        </sql>
+        <rollback>
+            <sql>ALTER TABLE favorites DROP CONSTRAINT IF EXISTS favorites_visibility_check;</sql>
+            <dropColumn tableName="favorites" columnName="category"/>
+            <dropColumn tableName="favorites" columnName="description"/>
+            <dropColumn tableName="favorites" columnName="tags"/>
+            <dropColumn tableName="favorites" columnName="visibility"/>
+            <dropColumn tableName="favorites" columnName="allowed_roles"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

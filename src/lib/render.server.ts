@@ -58,16 +58,33 @@ export function renderDocument(source: string): RenderedDoc {
 
   const raw = marked.parse(prepared, { renderer, async: false, gfm: true, breaks: false }) as string;
 
+  // Sanitisation pour la sécurité : bloque JavaScript mais autorise HTML et CSS
   const html = sanitizeHtml(raw, {
-    allowedTags: [...sanitizeHtml.defaults.allowedTags, 'img', 'figure', 'figcaption', 'details', 'summary', 'style', 'section', 'span', 'video', 'source', 'h1', 'h2'],
+    allowedTags: [
+      ...sanitizeHtml.defaults.allowedTags,
+      'img', 'figure', 'figcaption', 'details', 'summary', 'style', 
+      'section', 'article', 'aside', 'nav', 'header', 'footer', 'main',
+      'span', 'div', 'video', 'source', 'audio', 'iframe',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'mark', 'small', 'abbr', 'cite', 'time', 'kbd', 'sub', 'sup',
+      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption'
+    ],
     allowedAttributes: {
-      '*': ['class', 'id', 'style', 'data-chart', 'data-mermaid', 'colspan', 'rowspan', 'align'],
-      a: ['href', 'name', 'target', 'rel', 'title'],
-      img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
-      video: ['src', 'controls', 'poster', 'width', 'height'],
+      '*': ['class', 'id', 'style', 'data-*', 'colspan', 'rowspan', 'align', 'title', 'aria-*'],
+      a: ['href', 'name', 'target', 'rel', 'title', 'download'],
+      img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'srcset', 'sizes'],
+      video: ['src', 'controls', 'poster', 'width', 'height', 'autoplay', 'loop', 'muted', 'preload'],
+      audio: ['src', 'controls', 'autoplay', 'loop', 'muted', 'preload'],
       source: ['src', 'type'],
+      iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'loading'],
+      table: ['border', 'cellpadding', 'cellspacing'],
+      td: ['colspan', 'rowspan', 'align', 'valign'],
+      th: ['colspan', 'rowspan', 'align', 'valign', 'scope'],
+      time: ['datetime'],
+      abbr: ['title'],
     },
     allowedSchemes: ['http', 'https', 'mailto', 'data'],
+    allowedIframeHostnames: ['www.youtube.com', 'youtube.com', 'player.vimeo.com', 'vimeo.com'],
     allowVulnerableTags: true,
     transformTags: {
       a: (tagName, attribs) => ({

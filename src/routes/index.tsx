@@ -91,7 +91,7 @@ function Home() {
           <ul className="mt-4 space-y-2">
             {data.favorites.map((fav) => (
               <li key={fav.id}>
-                <a href={fav.href} className="surface flex items-center justify-between p-3 text-sm transition-colors hover:border-primary">
+                <a href={fav.href} target="_blank" rel="noopener noreferrer" className="surface flex items-center justify-between p-3 text-sm transition-colors hover:border-primary">
                   <span>{fav.label}</span>
                   <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
                 </a>
