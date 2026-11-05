@@ -75,9 +75,12 @@ frontend/
 │   │   ├── site-header.tsx
 │   │   └── ...
 │   ├── lib/             # Utilitaires et services
-│   │   ├── keycloak.ts  # Client Keycloak
-│   │   ├── db.server.ts # Accès DB (SSR)
-│   │   └── queries.ts   # React Query hooks
+│   │   ├── keycloak.ts       # Client Keycloak
+│   │   ├── api-client.ts     # Client HTTP → Spring Boot
+│   │   ├── admin.functions.ts# Server functions (fallback mémoire)
+│   │   ├── content.functions.ts
+│   │   ├── db.server.ts      # Accès DB direct (mode mémoire uniquement)
+│   │   └── queries.ts        # React Query hooks
 │   └── styles.css       # Styles globaux
 ├── public/              # Assets statiques
 └── vite.config.ts       # Configuration Vite
@@ -513,7 +516,7 @@ sequenceDiagram
   },
   "resource_access": {
     "infovergne-home": {
-      "roles": ["INFOVERGNE_ADMIN"]
+      "roles": ["ADMIN"]
     }
   },
   "scope": "openid profile email",

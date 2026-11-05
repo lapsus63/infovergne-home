@@ -160,7 +160,7 @@ VITE_API_URL=https://your-domain.com/api
 
 - **Keycloak OAuth2/OpenID Connect** avec flux Authorization Code + PKCE
 - **JWT** pour l'authentification stateless
-- **Roles** : `ADMIN`, `INFOVERGNE_ADMIN`, `USER`
+- **Roles** : `ADMIN`, `USER`
 
 ### Autorisation
 

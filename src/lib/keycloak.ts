@@ -245,6 +245,13 @@ export async function ensureFreshToken(): Promise<string | null> {
   return load()?.access_token ?? null;
 }
 
+/** Initialise le fournisseur de token pour api-client.ts */
+export function initApiTokenProvider() {
+  import('./api-client').then(({ setTokenProvider }) => {
+    setTokenProvider(() => load()?.access_token ?? null);
+  }).catch(() => {});
+}
+
 export function startSessionWatcher() {
   if (typeof window === 'undefined') return () => {};
   const tick = () => {

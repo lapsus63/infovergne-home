@@ -43,7 +43,10 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/actuator/health",
                     "/actuator/info",
-                    "/api/public/**"
+                    "/api/public/**",
+                    "/api/rss/**",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**"
                 ).permitAll()
                 
                 // Endpoints API protégés

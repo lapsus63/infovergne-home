@@ -1,6 +1,7 @@
 package com.infovergne.home.controller;
 
 import com.infovergne.home.model.Space;
+import com.infovergne.home.service.DocService;
 import com.infovergne.home.service.SpaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/spaces")
@@ -17,64 +19,55 @@ import java.util.List;
 public class SpaceController {
 
     private final SpaceService spaceService;
+    private final DocService docService;
 
-    /**
-     * Liste tous les espaces accessibles par l'utilisateur.
-     */
     @GetMapping
     public ResponseEntity<List<Space>> listSpaces(@AuthenticationPrincipal Jwt jwt) {
-        List<String> userRoles = extractRoles(jwt);
-        List<Space> spaces = spaceService.listAccessibleSpaces(userRoles);
-        return ResponseEntity.ok(spaces);
+        return ResponseEntity.ok(spaceService.listAccessibleSpaces(extractRoles(jwt)));
     }
 
-    /**
-     * Récupère un espace par son slug.
-     */
     @GetMapping("/{slug}")
     public ResponseEntity<Space> getSpace(@PathVariable String slug, @AuthenticationPrincipal Jwt jwt) {
-        List<String> userRoles = extractRoles(jwt);
-        Space space = spaceService.getSpace(slug, userRoles);
-        return ResponseEntity.ok(space);
+        return ResponseEntity.ok(spaceService.getSpace(slug, extractRoles(jwt)));
     }
 
-    /**
-     * Crée un nouvel espace (admin uniquement).
-     */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'INFOVERGNE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<Space> createSpace(@RequestBody Space space, @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
-        Space created = spaceService.createSpace(space, userId);
-        return ResponseEntity.ok(created);
+        return ResponseEntity.ok(spaceService.createSpace(space, jwt.getSubject()));
     }
 
-    /**
-     * Met à jour un espace existant (admin uniquement).
-     */
     @PutMapping("/{slug}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'INFOVERGNE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<Space> updateSpace(@PathVariable String slug, @RequestBody Space space, @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
-        Space updated = spaceService.updateSpace(slug, space, userId);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(spaceService.updateSpace(slug, space, jwt.getSubject()));
     }
 
-    /**
-     * Supprime un espace (admin uniquement).
-     */
     @DeleteMapping("/{slug}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'INFOVERGNE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<Void> deleteSpace(@PathVariable String slug, @AuthenticationPrincipal Jwt jwt) {
-        String userId = jwt.getSubject();
-        spaceService.deleteSpace(slug, userId);
+        spaceService.deleteSpace(slug, jwt.getSubject());
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Extrait les rôles du JWT (en majuscules, sans le préfixe ROLE_).
-     */
-    private List<String> extractRoles(Jwt jwt) {
-        return jwt.getClaimAsStringList("realm_access.roles");
+    @GetMapping("/by-id/{id}/deletion-impact")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getDeletionImpact(@PathVariable String id) {
+        DocService.DeletionImpact impact = docService.getSpaceDeletionImpact(id);
+        return ResponseEntity.ok(Map.of(
+            "spaceName", impact.spaceName(),
+            "spaceType", impact.spaceType(),
+            "docsCount", impact.docsCount(),
+            "publishedDocsCount", impact.publishedDocsCount()
+        ));
+    }
+
+    static List<String> extractRoles(Jwt jwt) {
+        if (jwt == null) return List.of();
+        Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        if (realmAccess == null) return List.of();
+        Object roles = realmAccess.get("roles");
+        if (roles instanceof List<?> list) return list.stream().map(Object::toString).toList();
+        return List.of();
     }
 }

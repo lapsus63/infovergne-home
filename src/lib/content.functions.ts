@@ -200,12 +200,26 @@ export const search = createServerFn({ method: 'GET' })
   .inputValidator((data: { q: string }) => data)
   .handler(async ({ data }) => {
     const db = await import('./db.server');
-    const { scoreItem, highlight } = await import('./search.server');
-    const { plainText } = await import('./render.server');
-    const { user } = await context();
     const query = (data.q ?? '').trim();
     if (query.length < 2) return { results: [] };
 
+    // Déléguer au backend si disponible
+    if (!db.memoryMode()) {
+      try {
+        const backendUrl = process.env['API_URL'] ?? 'http://localhost:8080/api';
+        const res = await fetch(`${backendUrl}/search?q=${encodeURIComponent(query)}`);
+        if (res.ok) {
+          const json = await res.json() as { results: { kind: string; title: string; href: string; context: string; snippet: string; score: number }[] };
+          return json;
+        }
+      } catch {
+        // fallback ci-dessous
+      }
+    }
+
+    const { scoreItem, highlight } = await import('./search.server');
+    const { plainText } = await import('./render.server');
+    const { user } = await context();
     const [spaces, docs, apps] = await Promise.all([db.listSpaces(), db.listDocs(), db.listApps()]);
 
     const docResults = visibleDocs(docs, spaces, user).map((doc) => {

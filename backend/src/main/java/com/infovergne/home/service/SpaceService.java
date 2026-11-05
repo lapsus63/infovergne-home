@@ -72,9 +72,8 @@ public class SpaceService {
      */
     public void deleteSpace(String slug, String userId) {
         Space space = spaceRepository.findBySlug(slug).orElseThrow(() -> new ResourceNotFoundException("Space not found: " + slug));
-        
+        // Supprimer les docs en cascade (FK avec deleteCascade dans le schéma)
         spaceRepository.delete(space.getId());
-        
         auditService.log(userId, "DELETE", "space", space.getId(), null);
         log.info("Space deleted: {} by user {}", slug, userId);
     }

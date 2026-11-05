@@ -6,6 +6,24 @@ function escape(value: string): string {
 
 /** Flux public : uniquement les contenus publiés et publics d'espaces publics. */
 export async function buildFeed(origin: string, spaceSlug: string | null): Promise<Response> {
+  // Déléguer au backend Spring Boot si disponible
+  const backendUrl = process.env['VITE_API_URL'] ?? process.env['API_URL'] ?? 'http://localhost:8080/api';
+  if (process.env['DATABASE_URL']) {
+    try {
+      const path = spaceSlug ? `/rss/${spaceSlug}.xml` : '/rss/rss.xml';
+      const res = await fetch(`${backendUrl}${path}`);
+      if (res.ok) {
+        const xml = await res.text();
+        return new Response(xml, {
+          headers: { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'public, max-age=300' },
+        });
+      }
+    } catch {
+      // fallback ci-dessous
+    }
+  }
+
+  // Fallback mode mémoire
   const [spaces, docs, settings] = await Promise.all([listSpaces(), listDocs(), getSettings()]);
   const publicSpaces = spaces.filter((s) => s.visibility === 'public');
   const target = spaceSlug ? publicSpaces.find((s) => s.slug === spaceSlug) : null;

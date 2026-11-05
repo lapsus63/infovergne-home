@@ -91,6 +91,10 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    import('@/lib/keycloak').then(({ initApiTokenProvider }) => initApiTokenProvider()).catch(() => {});
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

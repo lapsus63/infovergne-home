@@ -43,6 +43,12 @@ public class SpaceRepository {
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
     }
 
+    public Optional<Space> findById(String id) {
+        String sql = "SELECT * FROM spaces WHERE id = ?";
+        List<Space> results = jdbcTemplate.query(sql, ROW_MAPPER, id);
+        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+    }
+
     public Space save(Space space) {
         String sql = """
             INSERT INTO spaces (id, slug, name, type, description, accent, visibility, allowed_roles, write_roles, position)
